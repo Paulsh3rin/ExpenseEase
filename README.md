@@ -26,9 +26,15 @@ To get started with this project, follow these steps:
     ```
 3. Install required Python packages:
     ```
-    pip install -r requirements.txt
+    pip install dash
+    pip install dash_bootstrap_components
+    pip install pytesseract
     ```
-
+4. Install Tesseract OCR in codespace:
+    ```
+    sudo apt-get update
+    sudo apt-get install tesseract-ocr -y
+    ```
 ## Usage
 
 To run the application:
