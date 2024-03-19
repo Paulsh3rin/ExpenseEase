@@ -42,7 +42,7 @@ To run the application:
 1. Navigate to the project directory.
 2. Execute the main application file:
     ```
-    python app.py
+    app.py
     ```
 
 ## Contributing
