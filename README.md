@@ -51,7 +51,7 @@ We welcome contributions to this project! If you have suggestions for improvemen
 
 ## Credits
 
-- [Your Name] - Project Author
-- Contributions from the open source community.
+-
+-
 
 ## License
