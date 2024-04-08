@@ -1,29 +1,57 @@
 import dash
-from dash import html, dcc, Input, Output, State
+from dash import html, dcc, Input, Output, State, dash_table
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 import base64
-from PIL import Image
+
+from PIL import Image, ImageEnhance, ImageOps 
 import pytesseract
 import re
 import io
 
-# Define a simple function to extract and parse text from images
-def extract_text_from_image(image_content):
+# image pre-processing function
+def preprocess_image(image_content):
     img = Image.open(io.BytesIO(image_content))
+    img = img.convert('L')  # Convert to grayscale
+    img = ImageEnhance.Contrast(img).enhance(2)  # Enhance contrast
+    img = img.point(lambda x: 0 if x < 128 else 255)  # Apply threshold
+    img.save("/workspaces/ExpenseEase/preprocessed_image.jpg")
+    return img
+
+# function to extract and parse text from images
+def extract_text_from_image(image_content):
+    img = preprocess_image(image_content)
     text = pytesseract.image_to_string(img, lang="eng")
     return text
 
+# Extract Date
 def find_date(text):
-    match = re.search(r'\d{2}/\d{2}/\d{4}', text)
-    if match:
-        return match.group()
-    return None
+    date_patterns = [
+        r'\d{2}/\d{2}/\d{4}',  # MM/DD/YYYY
+        r'\d{2}-\d{2}-\d{4}',  # MM-DD-YYYY
+        r'\d{4}/\d{2}/\d{2}'   # YYYY/MM/DD
+    ]
+    for pattern in date_patterns:
+        match = re.search(pattern, text)
+        if match:
+            return match.group()
+    return "Date not found"
 
+# Extract Items
 def find_items(text):
-    # Implement item extraction logic here
-    return []
-
+    item_pattern = re.compile(r'(?:(\d+)\s+)?(.*?)\s+(\d{1,3}(?:,\s?\d{3})*)')
+    
+    items = []
+    for line in text.split('\n'):
+        match = item_pattern.search(line)
+        if match:
+            quantity, description, price = match.groups()
+            # Default quantity to 1 if not present
+            quantity = quantity or '1'
+            # Remove spaces from price to normalize it
+            price = price.replace(', ', '').replace(',', '')
+            items.append({'quantity': quantity, 'description': description.strip(), 'price': price})
+    return items
 # Initialize the Dash app
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -64,6 +92,7 @@ def update_output(contents):
                Output('extracted-date', 'children'),
                Output('extracted-items', 'children')],
               Input('upload-image', 'contents'))
+
 def extract_and_parse(contents):
     if contents is not None:
         content_type, content_string = contents.split(',')
@@ -71,9 +100,34 @@ def extract_and_parse(contents):
         text = extract_text_from_image(decoded)
         date = find_date(text)
         items = find_items(text)
+
+        # Format the extracted items for display in a Dash DataTable
+        if items:
+            items_table = dash_table.DataTable(
+                columns=[
+                    {'name': 'Quantity', 'id': 'quantity'},
+                    {'name': 'Description', 'id': 'description'},
+                    {'name': 'Price', 'id': 'price'}
+                ],
+                data=items,
+                style_table={'overflowX': 'auto'},
+                style_cell={
+                    'height': 'auto',
+                    # all three widths are needed
+                    'minWidth': '80px', 'width': '80px', 'maxWidth': '80px',
+                    'whiteSpace': 'normal'
+                },
+                style_header={
+                    'backgroundColor': 'white',
+                    'fontWeight': 'bold'
+                }
+            )
+        else:
+            items_table = html.P("No items found.")
+
         return [html.P(f"Extracted Text: {text}"),
-                html.P(f"Date: {date if date else 'Not found'}"),
-                html.P(f"Items: {items if items else 'Not found'}")]
+                html.P(f"Date: {date}"),
+                items_table]
     return [None, None, None]
 
 if __name__ == '__main__':
