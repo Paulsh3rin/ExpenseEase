@@ -1,13 +1,20 @@
+import openai
 import dash
-from dash import html, dcc, Input, Output, State, dash_table
-from dash.dependencies import Input, Output, State
+from dash import html, dcc, dash_table
+from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
 import base64
-
-from PIL import Image, ImageEnhance, ImageOps 
+from PIL import Image, ImageEnhance, ImageOps
 import pytesseract
 import re
 import io
+
+client = openai()
+
+# Initialize your Dash app
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+openai.api_key = 'Your KEy'
 
 # image pre-processing function
 def preprocess_image(image_content):
@@ -52,8 +59,15 @@ def find_items(text):
             price = price.replace(', ', '').replace(',', '')
             items.append({'quantity': quantity, 'description': description.strip(), 'price': price})
     return items
-# Initialize the Dash app
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+# Define the function to call the OpenAI API
+def structure_with_gpt(text):
+    response = client.completions.create(
+      model="gpt-3.5-turbo-instruct",
+      prompt=f"Structure the following receipt text into a JSON format: {text}"
+    )
+    structured_text = response['choices'][0]['text'].strip()
+    return structured_text
 
 app.layout = dbc.Container([
     dcc.Upload(
@@ -74,61 +88,49 @@ app.layout = dbc.Container([
     html.Div(id='extracted-items')
 ])
 
-def parse_contents(contents):
-    return html.Div([
-        html.Img(src=contents, style={'maxWidth': '100%', 'height': 'auto'}),
-    ])
-
-@app.callback(Output('output-image-upload', 'children'),
-              Input('upload-image', 'contents'))
-def update_output(contents):
-    if contents is not None:
-        children = parse_contents(contents)
-        return children
-    else:
-        return None
-
-@app.callback([Output('extracted-text', 'children'),
-               Output('extracted-date', 'children'),
-               Output('extracted-items', 'children')],
-              Input('upload-image', 'contents'))
+@app.callback(
+    [Output('output-image-upload', 'children'),
+     Output('extracted-text', 'children'),
+     Output('extracted-date', 'children'),
+     Output('extracted-items', 'children')],
+    [Input('upload-image', 'contents')]
+)
 
 def extract_and_parse(contents):
-    if contents is not None:
+    if contents:
         content_type, content_string = contents.split(',')
         decoded = base64.b64decode(content_string)
         text = extract_text_from_image(decoded)
+        structured_text = structure_with_gpt(text)
         date = find_date(text)
-        items = find_items(text)
+        items = find_items(structured_text)
 
         # Format the extracted items for display in a Dash DataTable
-        if items:
-            items_table = dash_table.DataTable(
-                columns=[
-                    {'name': 'Quantity', 'id': 'quantity'},
-                    {'name': 'Description', 'id': 'description'},
-                    {'name': 'Price', 'id': 'price'}
-                ],
-                data=items,
-                style_table={'overflowX': 'auto'},
-                style_cell={
-                    'height': 'auto',
-                    # all three widths are needed
-                    'minWidth': '80px', 'width': '80px', 'maxWidth': '80px',
-                    'whiteSpace': 'normal'
-                },
-                style_header={
-                    'backgroundColor': 'white',
-                    'fontWeight': 'bold'
-                }
-            )
-        else:
-            items_table = html.P("No items found.")
 
-        return [html.P(f"Extracted Text: {text}"),
+        items_table = dash_table.DataTable(
+            columns=[
+                {'name': 'Quantity', 'id': 'quantity'},
+                {'name': 'Description', 'id': 'description'},
+                {'name': 'Price', 'id': 'price'}
+            ],
+            data=items,
+            style_table={'overflowX': 'auto'},
+            style_cell={
+                'height': 'auto',
+                # all three widths are needed
+                'minWidth': '80px', 'width': '80px', 'maxWidth': '80px',
+                'whiteSpace': 'normal'
+            },
+            style_header={
+                'backgroundColor': 'white',
+                'fontWeight': 'bold'
+            }
+            )
+        return [html.Img(src=contents, style={'maxWidth': '100%', 'height': 'auto'}),
+                html.P(f"Extracted Text: {text}"),
                 html.P(f"Date: {date}"),
                 items_table]
-    return [None, None, None]
+    return [None, None, None, None]
 
 if __name__ == '__main__':
     app.run_server(debug=True)
