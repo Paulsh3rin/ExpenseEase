@@ -13,7 +13,7 @@ import json
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 # Replace 'Your Key' with your actual OpenAI API key
-client = OpenAI(api_key='Key')
+client = OpenAI(api_key='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')
 
 
 # Function to preprocess the image for better OCR results
