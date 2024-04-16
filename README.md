@@ -50,9 +50,11 @@ To run the application:
 We welcome contributions to this project! If you have suggestions for improvements or bug fixes, please feel free to submit an issue or pull request.
 
 ## Credits
-Repo setup up <a href="https://github.com/sravyaphani" target="_blank">Sravya (100904809)</a>
+- Repo setup up <a href="https://github.com/sravyaphani" target="_blank">Sravya (100904809)</a>
+- Preprocessing <a href="https://github.com/yashinisar" target="_blank">Yashi (100901014)</a>
+- Preprocessing <a href="https://github.com/Paulsh3rin" target="_blank">Sherin (100866911)</a>
 
--
--
+
+
 
 ## License
