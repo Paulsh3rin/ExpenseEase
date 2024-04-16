@@ -50,6 +50,7 @@ To run the application:
 We welcome contributions to this project! If you have suggestions for improvements or bug fixes, please feel free to submit an issue or pull request.
 
 ## Credits
+Repo setup up <a href="https://github.com/sravyaphani" target="_blank">Sravya (100904809)</a>
 
 -
 -
